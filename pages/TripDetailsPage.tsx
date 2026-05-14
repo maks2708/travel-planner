@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useSession } from '../contexts/SessionContext'
-import { ArrowLeft, Calendar, MapPin, Info, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Info, CheckCircle2, Pencil } from 'lucide-react'
 import { TripTodoList } from '../components/TripTodoList'
 import { TripTimeline } from '../components/TripTimeline'
 import { MapComponent } from '../components/Map'
@@ -133,12 +133,21 @@ export function TripDetailsPage() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         
-        <Link 
-          to="/" 
-          className="absolute top-6 left-6 p-3 bg-white/20 backdrop-blur-md text-white rounded-2xl hover:bg-white/40 transition-all border border-white/30 z-20"
-        >
-          <ArrowLeft size={24} />
-        </Link>
+        <div className="absolute left-6 right-6 top-6 z-20 flex items-center justify-between gap-3">
+          <Link
+            to="/"
+            className="flex shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/20 p-3 text-white backdrop-blur-md transition-all hover:bg-white/40"
+          >
+            <ArrowLeft size={24} />
+          </Link>
+          <Link
+            to={`/trip/${trip.id}/edit`}
+            className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/30 bg-white/20 px-4 py-3 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-white/40"
+          >
+            <Pencil size={18} />
+            <span className="hidden sm:inline">Редагувати</span>
+          </Link>
+        </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-6 -mt-24 relative z-10">

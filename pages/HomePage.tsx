@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useSession } from '../contexts/SessionContext'
 import { TripCard } from '../components/TripCard'
-import { uploadTripCover } from '../lib/tripCoverUpload'
-import { PlusCircle, X } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
 
 interface Trip {
   id: string
@@ -12,28 +11,15 @@ interface Trip {
   created_at: string
   description: string | null
   image_url: string | null
-  /** ISO date `YYYY-MM-DD` from Postgres `date`, or null */
   start_date: string | null
   end_date: string | null
 }
 
 export function HomePage() {
   const session = useSession()
+  const navigate = useNavigate()
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
-
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
-  const [coverFile, setCoverFile] = useState<File | null>(null)
-  const coverInputRef = useRef<HTMLInputElement>(null)
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [dateRangeError, setDateRangeError] = useState('')
-  const [saveError, setSaveError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const [editingId, setEditingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -54,93 +40,12 @@ export function HomePage() {
     setLoading(false)
   }
 
-  function startEditing(trip: Trip) {
-    setEditingId(trip.id)
-    setTitle(trip.title)
-    setDescription(trip.description || '')
-    setImageUrl(trip.image_url || '')
-    setCoverFile(null)
-    if (coverInputRef.current) coverInputRef.current.value = ''
-    setStartDate(trip.start_date ?? '')
-    setEndDate(trip.end_date ?? '')
-    setDateRangeError('')
-    setSaveError('')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  function resetForm() {
-    setEditingId(null)
-    setTitle('')
-    setDescription('')
-    setImageUrl('')
-    setCoverFile(null)
-    if (coverInputRef.current) coverInputRef.current.value = ''
-    setStartDate('')
-    setEndDate('')
-    setDateRangeError('')
-    setSaveError('')
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!editingId) return
-
-    setDateRangeError('')
-    setSaveError('')
-    if (startDate && endDate && startDate > endDate) {
-      setDateRangeError('Дата завершення не може бути раніше за дату початку.')
-      return
-    }
-
-    setIsSubmitting(true)
-
-    const uid = session?.user?.id
-    if (!uid) {
-      setIsSubmitting(false)
-      return
-    }
-
-    const start_date = startDate.trim() || null
-    const end_date = endDate.trim() || null
-
-    let finalImageUrl = coverFile ? null : imageUrl.trim() || null
-    if (coverFile) {
-      const up = await uploadTripCover(uid, editingId, coverFile)
-      if ('error' in up) {
-        setSaveError(up.error)
-        setIsSubmitting(false)
-        return
-      }
-      finalImageUrl = up.publicUrl
-    }
-
-    const { error } = await supabase
-      .from('trips')
-      .update({ title, description, image_url: finalImageUrl, start_date, end_date })
-      .eq('id', editingId)
-      .eq('user_id', uid)
-
-    if (!error) {
-      setTrips(
-        trips.map((t) =>
-          t.id === editingId
-            ? { ...t, title, description, image_url: finalImageUrl, start_date, end_date }
-            : t,
-        ),
-      )
-      resetForm()
-    } else {
-      setSaveError(error.message)
-    }
-    setIsSubmitting(false)
-  }
-
   async function handleDelete(id: string) {
     const uid = session?.user?.id
     if (!uid) return
     if (!window.confirm('Ви впевнені, що хочете видалити цю подорож?')) return
     const { error } = await supabase.from('trips').delete().eq('id', id).eq('user_id', uid)
-    if (!error) setTrips(trips.filter((t) => t.id !== id))
+    if (!error) setTrips((prev) => prev.filter((t) => t.id !== id))
   }
 
   return (
@@ -159,110 +64,6 @@ export function HomePage() {
             Нова подорож
           </Link>
         </div>
-
-        {editingId && (
-          <section className="mb-16">
-            <div className="rounded-[2rem] border-2 border-blue-500 bg-white p-6 shadow-xl shadow-blue-100 md:p-8">
-              <div className="mb-8 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <PlusCircle className="text-blue-500" />
-                  <h2 className="text-xl font-bold md:text-2xl">Редагувати подорож</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="flex items-center gap-1 text-sm font-bold text-slate-400 hover:text-slate-600"
-                >
-                  <X size={18} /> Скасувати
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-                <input
-                  placeholder="Назва локації"
-                  className="col-span-1 rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-                <input
-                  placeholder="Або URL фото (якщо без файлу)"
-                  className="col-span-1 rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 md:col-span-2"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  disabled={!!coverFile}
-                />
-                <div className="col-span-full flex flex-col gap-2">
-                  <label htmlFor="edit-trip-cover" className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                    Нова обкладинка (файл)
-                  </label>
-                  <input
-                    ref={coverInputRef}
-                    id="edit-trip-cover"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] ?? null
-                      setCoverFile(f)
-                      if (f) setImageUrl('')
-                    }}
-                  />
-                  {coverFile && (
-                    <p className="text-xs font-medium text-slate-500">Обрано: {coverFile.name}</p>
-                  )}
-                </div>
-                <textarea
-                  placeholder="Опишіть ваші плани..."
-                  className="col-span-full h-28 rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-                <div className="col-span-full flex flex-col gap-2 md:col-span-1">
-                  <label htmlFor="trip-start" className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                    Початок поїздки
-                  </label>
-                  <input
-                    id="trip-start"
-                    type="date"
-                    className="rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="col-span-full flex flex-col gap-2 md:col-span-1">
-                  <label htmlFor="trip-end" className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                    Завершення поїздки
-                  </label>
-                  <input
-                    id="trip-end"
-                    type="date"
-                    className="rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                {dateRangeError && (
-                  <p className="col-span-full text-sm font-semibold text-red-600" role="alert">
-                    {dateRangeError}
-                  </p>
-                )}
-                {saveError && (
-                  <p className="col-span-full text-sm font-semibold text-red-600" role="alert">
-                    {saveError}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="col-start-1 rounded-2xl bg-blue-500 p-4 font-bold text-white shadow-lg transition-all hover:bg-blue-600 disabled:opacity-60 md:col-start-3"
-                >
-                  {isSubmitting ? 'Збереження...' : 'Зберегти зміни'}
-                </button>
-              </form>
-            </div>
-          </section>
-        )}
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-10 lg:grid-cols-3">
           {loading ? (
@@ -283,7 +84,14 @@ export function HomePage() {
             </div>
           ) : (
             trips.map((trip) => (
-              <TripCard key={trip.id} trip={trip} onDelete={handleDelete} onEdit={startEditing} />
+              <TripCard
+                key={trip.id}
+                trip={trip}
+                onDelete={handleDelete}
+                onEdit={() => {
+                  navigate(`/trip/${trip.id}/edit`)
+                }}
+              />
             ))
           )}
         </div>

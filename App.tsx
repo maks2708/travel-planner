@@ -7,6 +7,7 @@ import { AppLayout } from './components/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { NewTripPage } from './pages/NewTripPage'
 import { TripDetailsPage } from './pages/TripDetailsPage'
+import { EditTripPage } from './pages/EditTripPage'
 import { AuthPage } from './pages/AuthPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -51,6 +52,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/trips/new" element={<NewTripPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/trip/:id/edit" element={<EditTripPage />} />
             <Route path="/trip/:id" element={<TripDetailsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
