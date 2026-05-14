@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Plane, LayoutGrid, User, LogOut } from 'lucide-react'
+import { Plane, LayoutGrid, PlusCircle, User, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useSession } from '../contexts/SessionContext'
 
@@ -32,6 +32,11 @@ export function AppLayout() {
               <LayoutGrid size={18} />
               <span className="hidden sm:inline">Мої подорожі</span>
               <span className="sm:hidden">Головна</span>
+            </NavLink>
+            <NavLink to="/trips/new" className={navClass}>
+              <PlusCircle size={18} />
+              <span className="hidden sm:inline">Нова поїздка</span>
+              <span className="sm:hidden">+</span>
             </NavLink>
             <NavLink to="/profile" className={navClass}>
               <User size={18} />

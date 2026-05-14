@@ -5,6 +5,7 @@ import { supabase } from './lib/supabaseClient'
 import { SessionProvider } from './contexts/SessionContext'
 import { AppLayout } from './components/AppLayout'
 import { HomePage } from './pages/HomePage'
+import { NewTripPage } from './pages/NewTripPage'
 import { TripDetailsPage } from './pages/TripDetailsPage'
 import { AuthPage } from './pages/AuthPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -48,6 +49,7 @@ function App() {
         ) : (
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/trips/new" element={<NewTripPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/trip/:id" element={<TripDetailsPage />} />
             <Route path="*" element={<NotFoundPage />} />
