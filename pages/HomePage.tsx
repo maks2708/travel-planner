@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useSession } from '../contexts/SessionContext'
 import { TripCard } from '../components/TripCard'
+import { uploadTripCover } from '../lib/tripCoverUpload'
 import { PlusCircle, X } from 'lucide-react'
 
 interface Trip {
@@ -24,9 +25,12 @@ export function HomePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [imageUrl, setImageUrl] = useState('')
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [dateRangeError, setDateRangeError] = useState('')
+  const [saveError, setSaveError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -55,9 +59,12 @@ export function HomePage() {
     setTitle(trip.title)
     setDescription(trip.description || '')
     setImageUrl(trip.image_url || '')
+    setCoverFile(null)
+    if (coverInputRef.current) coverInputRef.current.value = ''
     setStartDate(trip.start_date ?? '')
     setEndDate(trip.end_date ?? '')
     setDateRangeError('')
+    setSaveError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -66,9 +73,12 @@ export function HomePage() {
     setTitle('')
     setDescription('')
     setImageUrl('')
+    setCoverFile(null)
+    if (coverInputRef.current) coverInputRef.current.value = ''
     setStartDate('')
     setEndDate('')
     setDateRangeError('')
+    setSaveError('')
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -76,6 +86,7 @@ export function HomePage() {
     if (!editingId) return
 
     setDateRangeError('')
+    setSaveError('')
     if (startDate && endDate && startDate > endDate) {
       setDateRangeError('Дата завершення не може бути раніше за дату початку.')
       return
@@ -92,19 +103,34 @@ export function HomePage() {
     const start_date = startDate.trim() || null
     const end_date = endDate.trim() || null
 
+    let finalImageUrl = coverFile ? null : imageUrl.trim() || null
+    if (coverFile) {
+      const up = await uploadTripCover(uid, editingId, coverFile)
+      if ('error' in up) {
+        setSaveError(up.error)
+        setIsSubmitting(false)
+        return
+      }
+      finalImageUrl = up.publicUrl
+    }
+
     const { error } = await supabase
       .from('trips')
-      .update({ title, description, image_url: imageUrl, start_date, end_date })
+      .update({ title, description, image_url: finalImageUrl, start_date, end_date })
       .eq('id', editingId)
       .eq('user_id', uid)
 
     if (!error) {
       setTrips(
         trips.map((t) =>
-          t.id === editingId ? { ...t, title, description, image_url: imageUrl, start_date, end_date } : t,
+          t.id === editingId
+            ? { ...t, title, description, image_url: finalImageUrl, start_date, end_date }
+            : t,
         ),
       )
       resetForm()
+    } else {
+      setSaveError(error.message)
     }
     setIsSubmitting(false)
   }
@@ -160,11 +186,32 @@ export function HomePage() {
                   required
                 />
                 <input
-                  placeholder="URL фотографії"
-                  className="col-span-1 rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
+                  placeholder="Або URL фото (якщо без файлу)"
+                  className="col-span-1 rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 md:col-span-2"
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
+                  disabled={!!coverFile}
                 />
+                <div className="col-span-full flex flex-col gap-2">
+                  <label htmlFor="edit-trip-cover" className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                    Нова обкладинка (файл)
+                  </label>
+                  <input
+                    ref={coverInputRef}
+                    id="edit-trip-cover"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null
+                      setCoverFile(f)
+                      if (f) setImageUrl('')
+                    }}
+                  />
+                  {coverFile && (
+                    <p className="text-xs font-medium text-slate-500">Обрано: {coverFile.name}</p>
+                  )}
+                </div>
                 <textarea
                   placeholder="Опишіть ваші плани..."
                   className="col-span-full h-28 rounded-2xl border-none bg-slate-50 p-4 outline-none focus:ring-2 focus:ring-blue-500"
@@ -198,6 +245,11 @@ export function HomePage() {
                 {dateRangeError && (
                   <p className="col-span-full text-sm font-semibold text-red-600" role="alert">
                     {dateRangeError}
+                  </p>
+                )}
+                {saveError && (
+                  <p className="col-span-full text-sm font-semibold text-red-600" role="alert">
+                    {saveError}
                   </p>
                 )}
                 <button

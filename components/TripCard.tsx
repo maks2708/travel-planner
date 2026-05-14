@@ -1,5 +1,13 @@
 import { Trash2, MapPin, Calendar, ArrowRight, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { getTripStatus, tripStatusLabels, type TripStatusKind } from '../lib/tripStatus'
+
+const statusBadgeClass: Record<TripStatusKind, string> = {
+  upcoming: 'bg-blue-600 text-white shadow-md shadow-blue-200',
+  ongoing: 'bg-emerald-600 text-white shadow-md shadow-emerald-200',
+  past: 'bg-slate-500 text-white shadow-md shadow-slate-300',
+  nodates: 'bg-slate-200 text-slate-700',
+}
 
 /** Postgres `date` → `YYYY-MM-DD`; avoid midnight UTC shift in local calendar. */
 function formatTripFootnoteDate(iso: string) {
@@ -38,9 +46,16 @@ interface TripCardProps {
 }
 
 export const TripCard = ({ trip, onDelete, onEdit }: TripCardProps) => {
+  const status = getTripStatus(trip.start_date, trip.end_date)
+
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500 group">
       <div className="h-64 overflow-hidden relative">
+        <span
+          className={`absolute left-4 top-4 z-10 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ${statusBadgeClass[status]}`}
+        >
+          {tripStatusLabels[status]}
+        </span>
         {trip.image_url ? (
           <img 
             src={trip.image_url} 
