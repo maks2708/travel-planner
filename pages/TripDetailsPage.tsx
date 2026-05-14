@@ -8,11 +8,30 @@ import { TripTimeline } from '../components/TripTimeline'
 import { MapComponent } from '../components/Map'
 
 interface Trip {
-  id: string;
-  title: string;
-  description: string | null;
-  image_url: string | null;
-  created_at: string;
+  id: string
+  title: string
+  description: string | null
+  image_url: string | null
+  created_at: string
+  start_date: string | null
+  end_date: string | null
+}
+
+function formatTripDetailDate(iso: string) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('uk-UA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function tripRangeLabel(trip: Trip) {
+  if (trip.start_date && trip.end_date) {
+    return `${formatTripDetailDate(trip.start_date)} — ${formatTripDetailDate(trip.end_date)}`
+  }
+  if (trip.start_date) return `З ${formatTripDetailDate(trip.start_date)}`
+  if (trip.end_date) return `До ${formatTripDetailDate(trip.end_date)}`
+  return null
 }
 
 export function TripDetailsPage() {
@@ -134,11 +153,28 @@ export function TripDetailsPage() {
                 {trip.title}
               </h1>
             </div>
-            <div className="flex items-center gap-4 bg-slate-50 px-6 py-4 rounded-3xl border border-slate-100 shrink-0">
-              <Calendar className="text-blue-500" size={28} />
-              <div>
-                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Створено</p>
-                <p className="text-slate-700 font-bold">{new Date(trip.created_at).toLocaleDateString('uk-UA')}</p>
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-stretch">
+              <div className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-slate-50 px-6 py-4">
+                <Calendar className="text-blue-500" size={28} />
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    Дати поїздки
+                  </p>
+                  <p className="font-bold text-slate-700">
+                    {tripRangeLabel(trip) ?? '—'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-slate-50 px-6 py-4">
+                <Calendar className="text-slate-400" size={28} />
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    Створено
+                  </p>
+                  <p className="font-bold text-slate-700">
+                    {new Date(trip.created_at).toLocaleDateString('uk-UA')}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

@@ -1,17 +1,40 @@
-import { Trash2, MapPin, Calendar, ArrowRight, Pencil } from 'lucide-react';
+import { Trash2, MapPin, Calendar, ArrowRight, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
+
+/** Postgres `date` → `YYYY-MM-DD`; avoid midnight UTC shift in local calendar. */
+function formatTripFootnoteDate(iso: string) {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('uk-UA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function tripDatesCaption(trip: {
+  start_date: string | null
+  end_date: string | null
+  created_at: string
+}) {
+  if (trip.start_date && trip.end_date) {
+    return `${formatTripFootnoteDate(trip.start_date)} — ${formatTripFootnoteDate(trip.end_date)}`
+  }
+  if (trip.start_date) return `З ${formatTripFootnoteDate(trip.start_date)}`
+  if (trip.end_date) return `До ${formatTripFootnoteDate(trip.end_date)}`
+  return new Date(trip.created_at).toLocaleDateString('uk-UA')
+}
 
 interface TripCardProps {
   trip: {
-    id: string;
-    title: string;
-    description: string | null;
-    image_url: string | null;
-    created_at: string;
-  };
-  onDelete: (id: string) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onEdit: (trip: any) => void;
+    id: string
+    title: string
+    description: string | null
+    image_url: string | null
+    created_at: string
+    start_date: string | null
+    end_date: string | null
+  }
+  onDelete: (id: string) => void
+  onEdit: (trip: TripCardProps['trip']) => void
 }
 
 export const TripCard = ({ trip, onDelete, onEdit }: TripCardProps) => {
@@ -57,9 +80,18 @@ export const TripCard = ({ trip, onDelete, onEdit }: TripCardProps) => {
         </p>
         
         <div className="flex items-center justify-between pt-5 border-t border-gray-50">
-          <div className="flex items-center gap-2 text-gray-400 text-xs font-bold uppercase tracking-widest">
-            <Calendar size={14} className="text-blue-500" />
-            {new Date(trip.created_at).toLocaleDateString('uk-UA')}
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex items-center gap-2 text-gray-800 text-xs font-bold uppercase tracking-widest">
+              <Calendar size={14} className="shrink-0 text-blue-500" />
+              <span className="truncate normal-case font-semibold tracking-normal">
+                {tripDatesCaption(trip)}
+              </span>
+            </div>
+            {(trip.start_date || trip.end_date) && (
+              <p className="pl-6 text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Створено {new Date(trip.created_at).toLocaleDateString('uk-UA')}
+              </p>
+            )}
           </div>
          <Link 
   to={`/trip/${trip.id}`} 
